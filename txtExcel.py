@@ -1,62 +1,49 @@
-from decimal import Decimal
-
-
-def readFile(fileName):
-        fileObj = open(fileName, "r") #opens the file in read mode
-        words = fileObj.read().splitlines() #puts the file into an array
-        fileObj.close()
-        return words
-
-x = readFile("extrato.txt")
+with open("./extrato.txt", "r") as fileObj:
+    x = fileObj.read().splitlines()
+x = map(lambda s: s.replace('"',''), x)
 retorno = []
 for i in x:
-    saida = ""
     tratar = i.split(";")
-    tratar.pop(0)
-    tratar.pop(1)
-    rende = False
-    if tratar[1] == '"REM BASICA"' or tratar[1] == '"CRED JUROS"':
-        rende = True
+    if tratar[1] == 'Data_Mov':
+        continue
+    data = tratar[1]
+    des = tratar[3]
+    valor = tratar[4]
+    sentido = tratar[5]
+    if des == 'REM BASICA' or des == 'CRED JUROS':
         des = "Rendimentos"
-    tratar.pop(1)
-    if tratar[0] == '"Data_Mov"':
-        continue
-    tratar[0] = tratar[0].replace('"','')
-    ano = ""
-    mes = ""
-    dia = ""
-    i = 0
-    for n in tratar[0]:
-        if i<4:
-                ano += n
-        elif i<6:
-                mes += n
-        else:
-                dia += n
-        i += 1
-    data = dia + "/" + mes + "/" + ano
-    if len(retorno) > 0 and rende and retorno[len(retorno)-1].split(";")[1] == "Rendimentos" and retorno[len(retorno)-1].split(";")[0] == data:
-        temp = Decimal(retorno[len(retorno)-1].split(";")[2])
-        temp += Decimal(tratar[1].replace('"','') + "\n")
-        saida = data + ";"+ des +";" + str(temp) + "\n"
-        retorno[len(retorno)-1] = saida
-        continue
-            
-    elif tratar[2].replace('"','') == "C" and rende:
-        saida += data + ";"+ des +";"
-    elif tratar[2].replace('"','') == "C":
-        saida += data + ";;"
+    elif des == 'CAD AGUA':
+        des = "Agua"
+    elif des == 'PG LUZ/GAS':
+        des = "Energia"
     else:
-        saida += data + ";;;;;" 
+        des = ""
+    # dia = data[6:8]
+    # mes = data[4:6]
+    # ano = data[0:4]
+    data = data[6:8] + "/" + data[4:6] + "/" + data[0:4]
+    # Rendimentos no mesmo dia
+    if des == "Rendimentos"and retorno != [] and retorno[-1].split(";")[1] == "Rendimentos" and retorno[-1].split(";")[0] == data:
+            temp = float(retorno[-1].split(";")[2])
+            temp += float(valor + "\n")
+            saida = data + ";"+ des +";" + ('%.2f'%temp) + "\n"
+            retorno[-1] = saida
+            continue
+    # Posicionando na tabela
+    if sentido == 'C' and des != "":
+        saida = data + ";"+ des +";"
+    elif sentido == 'C':
+        saida = data + ";;"
+    elif sentido == 'D' and des != "":
+        saida = data + ";;;;" + des +";"
+    else:
+        saida = data + ";;;;;" 
         
-    saida += tratar[1].replace('"','') + "\n"
-    saida = saida.replace('"','')
+    saida += valor + "\n"
     retorno.append(saida)
-output = ""
-for x in retorno:
-    x = x.replace('.',',')
-    output += x
-print(output)
-f = open("resultado.txt", "w")
-f.write(output)
-f.close()
+
+with open("resultado.txt", "w") as fileObj:
+    for x in retorno:
+        output = x.replace('.',',')
+        fileObj.write(output)
+        print(x[:-1])
